@@ -38,21 +38,38 @@ class MainActivity : AppCompatActivity() {
     private var workerThread: ExecutorService = Executors.newCachedThreadPool()
     private lateinit var binding: ActivityMainBinding
 
+    //Check Status of Activity Permission
+    //1. Permission Access allowed GRANTED
+    //2. Permission Access not Allowed
+    //3. Permission Access not Allowed permanently DENIED
+    var checkStatus: Int = 2
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
         binding.button.setOnClickListener {
-            checkPermissions()
+            Log.d("myPermission", "${checkPermissions()}")
         }
+
         binding.button2.setOnClickListener {
-            if (checkPermissions()) {
+            if (checkRationale() == 1) {
                 workerThread.execute {
                     saveMediaFileToStorage("txt1.txt", readFromAsset("txt1.txt"), "PDF")
                 }
             } else {
                 Log.d("myFileTag", "checkPermissions not allowed")
             }
+        }
+    }
+
+    //This method calling after the CheckPermissions
+    fun checkRationale(): Int {
+        return if (checkPermissions()) {
+            1
+        } else {
+            checkStatus
         }
     }
 
@@ -87,7 +104,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkPermissions(): Boolean {
         // Check if all required permissions are granted
-        return if (!allPermissionsGranted()) {
+        return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            true
+        } else if (!allPermissionsGranted()) {
             // Request permissions
             ActivityCompat.requestPermissions(this, permissionList, requestCodePermission)
             false
@@ -101,6 +120,18 @@ class MainActivity : AppCompatActivity() {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
 
+    @RequiresApi(Build.VERSION_CODES.M)
+    private fun checkPermissionRationale(): Boolean {
+        var permissionDenied = false
+        permissionList.forEachIndexed { _, permission ->
+            if (shouldShowRequestPermissionRationale(permission)) {
+                permissionDenied = true
+            }
+            Log.d("myPermissionRationale", "${shouldShowRequestPermissionRationale(permission)}")
+        }
+        return permissionDenied
+    }
+
     // Handle permission request result
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -112,9 +143,17 @@ class MainActivity : AppCompatActivity() {
             if (allPermissionsGranted()) {
                 // All permissions granted
                 Log.d("myRequestPer", "All permissions granted")
+                checkStatus = 1
             } else {
                 // Permission(s) denied
-                Log.d("myRequestPer", "Some permissions denied")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    checkStatus = if (checkPermissionRationale()) {
+                        2
+                    } else {
+                        3
+                    }
+                    Log.d("myRequestPer", "Some permissions denied ${checkPermissionRationale()}")
+                }
             }
         }
     }
