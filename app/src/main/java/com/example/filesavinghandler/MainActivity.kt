@@ -22,7 +22,7 @@ class MainActivity : AppCompatActivity() {
     private val requestCodePermission = 123
     private val permissionList = if (Build.VERSION.SDK_INT >= 33) {
         arrayOf(
-            Manifest.permission.READ_MEDIA_IMAGES
+            Manifest.permission.ACCESS_MEDIA_LOCATION
         )
     } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         arrayOf(
@@ -33,6 +33,7 @@ class MainActivity : AppCompatActivity() {
         arrayOf(
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.READ_EXTERNAL_STORAGE
+
         )
     }
     private var workerThread: ExecutorService = Executors.newCachedThreadPool()
@@ -44,6 +45,8 @@ class MainActivity : AppCompatActivity() {
     //3. Permission Access not Allowed permanently DENIED
     var checkStatus: Int = 2
 
+    var callBackPermission: CallbackPermission? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -54,14 +57,46 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.button2.setOnClickListener {
-            if (checkRationale() == 1) {
+
+            if (checkPermissions()) {
+                Log.d("myPermissionChecker", " All permissions is granted 1")
+            } else {
+                callBackPermission = object : CallbackPermission {
+                    override fun onPermissionGRANTED(): Int {
+                        Log.d("callBackPermission", "onPermissionGRANTED")
+                        checkStatus = 1
+                        Log.d("myPermissionChecker", " All permissions is granted 1")
+                        return 1
+                    }
+
+                    override fun onPermissionDENIED(): Int {
+                        Log.d("callBackPermission", "onPermissionDENIED")
+                        checkStatus = 2
+                        Log.d("myPermissionChecker", " All permissions is granted 2")
+                        return 2
+                    }
+
+                    override fun onPermissionPermanentlyDENIED(): Int {
+                        Log.d("callBackPermission", "onPermissionPermanentlyDENIED")
+                        checkStatus = 3
+                        Log.d("myPermissionChecker", " All permissions is granted 3")
+                        return 3
+                    }
+                }
+            }
+
+            /*if (checkRationale() == 1) {
                 workerThread.execute {
                     saveMediaFileToStorage("txt1.txt", readFromAsset("txt1.txt"), "PDF")
                 }
             } else {
                 Log.d("myFileTag", "checkPermissions not allowed")
-            }
+            }*/
         }
+    }
+
+    private fun checkPermissionsAllowed() {
+
     }
 
     //This method calling after the CheckPermissions
@@ -143,14 +178,14 @@ class MainActivity : AppCompatActivity() {
             if (allPermissionsGranted()) {
                 // All permissions granted
                 Log.d("myRequestPer", "All permissions granted")
-                checkStatus = 1
+                callBackPermission?.onPermissionGRANTED()
             } else {
                 // Permission(s) denied
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    checkStatus = if (checkPermissionRationale()) {
-                        2
+                    if (checkPermissionRationale()) {
+                        callBackPermission?.onPermissionDENIED()
                     } else {
-                        3
+                        callBackPermission?.onPermissionPermanentlyDENIED()
                     }
                     Log.d("myRequestPer", "Some permissions denied ${checkPermissionRationale()}")
                 }
@@ -189,5 +224,11 @@ class MainActivity : AppCompatActivity() {
             dirDest.mkdirs()
         }
         return root
+    }
+
+    interface CallbackPermission {
+        fun onPermissionGRANTED(): Int
+        fun onPermissionDENIED(): Int
+        fun onPermissionPermanentlyDENIED(): Int
     }
 }
