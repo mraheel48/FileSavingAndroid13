@@ -22,11 +22,10 @@ class MainActivity : AppCompatActivity() {
     private val requestCodePermission = 123
     private val permissionList = if (Build.VERSION.SDK_INT >= 33) {
         arrayOf(
-            Manifest.permission.ACCESS_MEDIA_LOCATION
+            Manifest.permission.READ_MEDIA_IMAGES
         )
     } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         arrayOf(
-            Manifest.permission.ACCESS_MEDIA_LOCATION,
             Manifest.permission.READ_EXTERNAL_STORAGE
         )
     } else {
